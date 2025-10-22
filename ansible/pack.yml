@@ -1,0 +1,8 @@
+---
+- name: PACK stage for AMI
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  become: true
+  roles:
+    - role: pack

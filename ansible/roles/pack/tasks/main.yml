@@ -1,0 +1,51 @@
+---
+- name: Install nginx and utilities
+  ansible.builtin.dnf:
+    name:
+      - nginx
+      - jq
+    state: present
+
+- name: Enable nginx (do not start yet)
+  ansible.builtin.systemd:
+    name: nginx
+    enabled: true
+
+- name: Ensure directories exist for fry runtime
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /opt/fry
+    - /opt/fry/roles
+    - /etc/fry
+
+# Copy the fry role onto the image so it can run at boot
+- name: Copy fry role
+  ansible.builtin.copy:
+    src: /tmp/ansible/roles/fry
+    dest: /opt/fry/roles/
+    owner: root
+    group: root
+    mode: "0755"
+
+# Create a small playbook that runs the fry role using vars from /etc/fry/vars.json
+- name: Install /opt/fry/fry.yml
+  ansible.builtin.template:
+    src: fry.yml.j2
+    dest: /opt/fry/fry.yml
+    owner: root
+    group: root
+    mode: "0644"
+
+# Systemd unit to run fry once per boot (triggered by user_data creating /etc/fry/vars.json)
+- name: Install fry systemd unit
+  ansible.builtin.copy:
+    src: fry.service
+    dest: /etc/systemd/system/fry.service
+    mode: "0644"
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true

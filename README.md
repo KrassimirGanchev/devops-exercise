@@ -1,2 +1,116 @@
-# devops-exercise
-some funadamental devops tasks
+# DevOps exercises: AWS VPC + EC2 App (Staging)
+
+This repo contains two deliverables:
+
+1. **AWS VPC Exercise** — A Terraform module (used via Terragrunt) that creates a staging VPC:
+   - CIDR **172.16.0.0/16**
+   - **2 Availability Zones**
+   - **Two public and two private subnets per AZ** (total 8 subnets)
+   - **Internet Gateway**, **NAT** per AZ
+   - **Route tables** (public & per‑AZ private with NAT)
+   - **VPC Endpoints**: S3 **gateway** endpoint and **interface** endpoints for **SSM**, **SSM Messages**, **EC2 Messages** (so EC2s in private subnets can use SSM without internet)
+
+2. **A Small EC2 App** — AMI built with **Packer** + **Ansible** using a **pack/fry idiom**:
+   - **Pack** role bakes **nginx** and places a **systemd** unit `fry.service`
+   - **Fry** role (runs at boot) renders a static HTML page with variables injected via **user data**
+   - Terraform stack (Terragrunt) creates:
+     - **Launch Template**
+     - **Auto Scaling Group** with **2 EC2 instances** in **private subnets**
+     - **Application Load Balancer (ALB)** in public subnets + **Target Group**
+     - **Security Groups** (ALB <-> instances, SSH)
+     - **IAM Instance Profile** with SSM and CloudWatch agent policies
+     - Optional HTTPS via **ACM** (set `enable_https`, `domain_name`, `route53_zone_id`)
+
+---
+
+## 0) Prereqs
+
+- Terraform ≥ 1.5, Terragrunt, Packer ≥ 1.10, Ansible, AWS CLI
+- An AWS account with permissions to create VPC, EC2, ALB, IAM, S3, ACM (optional), Route53 (Optional).
+
+---
+
+## 1) Build the AMI (Packer + Ansible)
+The pack role installs nginx and drops a fry.service that runs at boot. The fry role renders /usr/share/nginx/html/index.html using variables provided at instance launch (via user data).
+
+Build
+```bash
+cd packer
+packer init .
+packer build ami-al2023-nginx.pkr.hcl
+```
+
+When it finishes, note the AMI ID and place it into:
+live/staging/ec2-app/terragrunt.hcl  (ami_id = "ami-XXXXXXXX")
+
+---
+
+## 2) Network (VPC) — with Terragrunt
+
+> **Assumption:** We create **2 public + 2 private subnets per AZ**. Each AZ gets its own NAT Gateway; private route tables in each AZ default route to that NAT. S3 is a **gateway** endpoint; SSM endpoints are **interface** endpoints reachable inside the VPC.
+
+Outputs to note and be used further:
+
+vpc_id
+public_subnet_ids_for_alb — first public subnet in each AZ (for ALB)
+private_subnet_ids_for_asg — first private subnet in each AZ (for ASG)
+
+---
+
+## 3) EC2 App (ALB + ASG in private subnets)
+
+Configure:
+Edit live/staging/ec2-app/terragrunt.hcl:
+•	Set ami_id to the AMI from Packer.
+•	Optional: TLS data for HTTPS (with custom domain)
+•	Set ssh_ingress_cidrs to your IP for SSH.
+
+What happens:
+•	ALB is placed in the public subnets (one per AZ) and exposes HTTP (and HTTPS if you set ACM).
+•	ASG of 2 EC2s launches in private subnets (one per AZ).
+•	User data writes /etc/fry/vars.json with your site_title and message, then starts fry.service which renders the page and starts nginx.
+•	SSM works even in private subnets due to the VPC Interface Endpoints.
+
+Find your app: output alb_dns_name (e.g., http://staging-nginx-alb-xxxxxxxx.us-east-1.elb.amazonaws.com/)
+
+SSH: Use SSM Session Manager or SSH via bastion. Security group allows SSH from ssh_ingress_cidrs.
+
+TLS (optional): If you supply domain_name, route53_zone_id and enable_https=true, port 443 listener forwards to the target group, and HTTP (80) redirects to HTTPS.
+
+---
+
+## 4) Bring up the infra
+
+```bash
+cd live/staging
+terragrunt run-all init
+terragrunt run-all plan
+terragrunt run-all apply
+```
+---
+
+## Notes
+
+- Adjust CIDR ranges, instance types, and other parameters in the Terragrunt configurations as needed.
+- Subnets per AZ: The VPC module creates two public and two private subnets per AZ to align with the requirement and to enable multi‑AZ spreading for future workloads (e.g., separate app/data subnets).
+- NAT per AZ: Each AZ has its own NAT for high availability; all private subnets in that AZ route to their local NAT.
+- Endpoints:
+o S3 is a gateway endpoint attached to the private route tables.
+o SSM/SSM Messages/EC2 Messages are interface endpoints with a dedicated SG that allows 443 from the VPC CIDR.
+- Pack/Fry idiom:
+o Pack: bake stable OS deps (nginx, ansible, systemd unit).
+o Fry: apply dynamic config at boot (site title/message) via user data → /etc/fry/vars.json → fry.service runs ansible-playbook.
+- Private instances: The ASG runs in private subnets; outbound Internet goes via NAT to fetch packages/updates if needed.
+
+## Clean up
+
+These resources incur cost (ALB, NAT Gateways!). When done, clean up:
+
+```bash
+cd live/staging/
+terragrunt run-all destroy
+```
+---
+
+
+

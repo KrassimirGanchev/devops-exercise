@@ -1,0 +1,13 @@
+[Unit]
+Description=Fry role execution (configures nginx content)
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/etc/fry/vars.json
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'ansible-playbook /opt/fry/fry.yml'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

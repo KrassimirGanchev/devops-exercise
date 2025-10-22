@@ -1,0 +1,73 @@
+# ================================
+# Terraform / Terragrunt
+# ================================
+**/.terraform/
+**/.terraform/*
+
+# Terraform state & plans
+*.tfstate
+*.tfstate.*
+*.backup
+*.tfplan
+*.plan
+plan.out
+
+# Crash logs & overrides
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Variable files
+*.tfvars
+*.tfvars.json
+terraform.tfvars
+!terraform.tfvars.example
+!*.example.tfvars
+
+# Terragrunt caches & debug artifacts
+**/.terragrunt-cache/
+**/.terragrunt-cache/*
+**/.terragrunt-source-cache/
+**/terragrunt-debug.tfvars.json
+**/terragrunt-debug.hcl
+
+# keep provider/plugin lock files pinned in VCS
+!.terraform.lock.hcl
+
+
+# ================================
+# Packer
+# ================================
+packer_cache/
+**/packer_cache/*
+**/output-*/
+# Keep packer plugin lock files
+!**/*.pkr.hcl.lock.hcl
+
+# ================================
+# Ansible
+# ================================
+*.retry
+.ansible/
+**/.ansible/
+
+
+# ================================
+# Editors / IDEs
+# ================================
+.vscode/
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# Vim/Emacs/JetBrains swap files
+*~
+*.swp
+*.swo
+*.swm
+\#*\#
+.\#*
