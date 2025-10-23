@@ -1,6 +1,6 @@
-# DevOps exercises: AWS VPC + EC2 App (Staging)
+# DevOps exercises: AWS VPC + EC2 App (Staging) + Helm
 
-This repo contains two deliverables:
+This repo contains three deliverables:
 
 1. **AWS VPC Exercise** — A Terraform module (used via Terragrunt) that creates a staging VPC:
    - CIDR **172.16.0.0/16**
@@ -11,22 +11,32 @@ This repo contains two deliverables:
    - **VPC Endpoints**: S3 **gateway** endpoint and **interface** endpoints for **SSM**, **SSM Messages**, **EC2 Messages** (so EC2s in private subnets can use SSM without internet)
 
 2. **A Small EC2 App** — AMI built with **Packer** + **Ansible** using a **pack/fry idiom**:
-   - **Pack** role bakes **nginx** and places a **systemd** unit `fry.service`
+   - **Pack** role bakes **nginx** and **Amazon SSM agent** and places a **systemd** unit `fry.service`
    - **Fry** role (runs at boot) renders a static HTML page with variables injected via **user data**
    - Terraform stack (Terragrunt) creates:
      - **Launch Template**
      - **Auto Scaling Group** with **2 EC2 instances** in **private subnets**
      - **Application Load Balancer (ALB)** in public subnets + **Target Group**
+     - **Bastion host** for SSH access to private instances (optional)
      - **Security Groups** (ALB <-> instances, SSH)
      - **IAM Instance Profile** with SSM and CloudWatch agent policies
+     - **Automated SSH key generation** and management (optional)
      - Optional HTTPS via **ACM** (set `enable_https`, `domain_name`, `route53_zone_id`)
+
+3. **Helm Chart (Nginx + Ingress)** — A Kubernetes application deployment:
+   - **Nginx deployment** with configurable replicas
+   - **Service** (ClusterIP)
+   - **Ingress resource** for external access
+   - Supports both local testing (minikube) and AWS deployment
+   - Configurable for ALB (optional) or NGINX ingress controller (used)
 
 ---
 
 ## 0) Prereqs
 
 - Terraform ≥ 1.5, Terragrunt, Packer ≥ 1.10, Ansible, AWS CLI
-- An AWS account with permissions to create VPC, EC2, ALB, IAM, S3, ACM (optional), Route53 (Optional).
+- **For Helm/Kubernetes**: kubectl, Helm ≥ 3.0, Docker, minikube (or kind) for local testing
+- An AWS account with permissions to create VPC, EC2, ALB, IAM, EKS, S3, ACM (optional), Route53 (Optional).
 
 ---
 
