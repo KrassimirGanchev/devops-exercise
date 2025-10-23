@@ -1,0 +1,74 @@
+name: Deploy Helm to Staging EKS (OIDC)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'charts/**'
+      - '.github/workflows/deploy-helm.yml'
+
+permissions:
+  id-token: write    # Required for OIDC authentication
+  contents: read     # Required to checkout code
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: staging-eks
+  HELM_RELEASE: my-nginx
+  NAMESPACE: staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-EKS-Deploy
+
+      - name: Verify AWS identity
+        run: |
+          echo "Authenticated as:"
+          aws sts get-caller-identity
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.28.0'  # Match EKS cluster version
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.13.0'
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+          echo "EKS cluster configured"
+
+      - name: Verify cluster access
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Deploy Helm chart
+        run: |
+          helm upgrade --install "$HELM_RELEASE" ./charts/nginx \
+            --namespace "$NAMESPACE" \
+            --create-namespace \
+            -f charts/nginx/values.yaml \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment
+        run: |
+          echo "Checking deployment status..."
+          kubectl get pods -n "$NAMESPACE"
+          kubectl get svc -n "$NAMESPACE"
+          helm list -n "$NAMESPACE"
