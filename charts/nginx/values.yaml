@@ -1,0 +1,25 @@
+replicaCount: 2
+
+image:
+  repository: nginx
+  tag: "1.25"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx # or "alb" if using AWS Load Balancer Controller
+  hosts:
+    - host: staging.example.com   # <-- change to a custom domain
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: [] # e.g., [{ hosts: ["staging.example.com"], secretName: staging-tls }]
+
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

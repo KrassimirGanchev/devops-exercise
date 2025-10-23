@@ -114,3 +114,68 @@ terragrunt run-all destroy
 
 
 
+## 4) Helm Chart (Nginx + Ingress)
+
+### Overview
+This Helm chart deploys an NGINX deployment with a service and an ingress resource. The ingress can be configured to use either the AWS Load Balancer Controller (ALB) or a standard NGINX ingress controller.
+
+###  Render templates locally (dry-run, no cluster connection needed)
+
+Render the templates locally
+```bash
+helm template charts/nginx -f charts/nginx/values.yaml --namespace staging
+```
+### Prerequisits for a local run
+
+To run it locally, have pre-installed 
+- docker 
+- minikube (or kind)
+- kubectl (within 2 minor version deviation from the kubernetes version)
+- helm
+
+### Pack and install the chart
+```bash
+cd charts/nginx
+helm dependency update
+helm install my-nginx . -f values.yaml --namespace staging --create-namespace
+# Check the helm release
+helm list -n staging
+# Check pods are running
+kubectl get pods -n staging
+# Check services
+kubectl get svc -n staging
+```
+Check the running helm release
+```bash
+helm list -n staging
+```
+If the chart needs to get packed and distributed:
+```bash
+cd charts
+helm package nginx
+helm repo index . --url https://your-repo-url/charts
+```
+
+### Test the nginx server (minikube locally installed)
+Port-forward to access the nginx service
+```bash
+kubectl port-forward -n staging svc/my-nginx 8080:80
+```
+Access via browser (http://localhost:8080) or curl
+```bash
+curl http://localhost:8080
+```
+
+### Uninstall the helm release
+```bash
+helm uninstall my-nginx -n staging
+```
+Make sure pods are gone (clean up)
+```bash
+kubectl get pods -n staging
+```
+
+### Further considerations
+Set charts/nginx/values.yaml → ingress.hosts[0].host to a custom domain.
+For AWS Load Balancer Controller, set ingress.className: alb and ensure the controller is installed.
+
