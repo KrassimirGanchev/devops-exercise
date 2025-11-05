@@ -34,7 +34,7 @@ This repo contains three deliverables:
 
 ## 0) Prereqs
 
-- Terraform ≥ 1.5, Terragrunt, Packer ≥ 1.10, Ansible, AWS CLI
+- Terraform ≥ 1.5, Terragrunt > 0.93, Packer ≥ 1.10, Ansible, AWS CLI
 - **For Helm/Kubernetes**: kubectl, Helm ≥ 3.0, Docker, minikube (or kind) for local testing
 - An AWS account with permissions to create VPC, EC2, ALB, IAM, EKS, S3, ACM (optional), Route53 (Optional).
 
@@ -92,10 +92,10 @@ TLS (optional): If you supply domain_name, route53_zone_id and enable_https=true
 ## 4) Bring up the infra
 
 ```bash
-cd live/staging
-terragrunt run-all init
-terragrunt run-all plan
-terragrunt run-all apply
+cd live
+terragrunt run --all --backend-bootstrap init
+terragrunt run --all -- plan
+terragrunt run --all -- apply
 ```
 ---
 
@@ -118,7 +118,7 @@ These resources incur cost (ALB, NAT Gateways!). When done, clean up:
 
 ```bash
 cd live/staging/
-terragrunt run-all destroy
+terragrunt run --all destroy
 ```
 ---
 
