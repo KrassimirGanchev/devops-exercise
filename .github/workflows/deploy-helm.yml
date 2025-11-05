@@ -40,7 +40,7 @@ jobs:
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
         with:
-          version: 'v1.28.0'  # Match EKS cluster version
+          version: 'v1.34.0'  # Match EKS cluster version
 
       - name: Install Helm
         uses: azure/setup-helm@v4

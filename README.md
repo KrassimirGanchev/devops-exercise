@@ -105,11 +105,11 @@ terragrunt run --all -- apply
 - Subnets per AZ: The VPC module creates two public and two private subnets per AZ to align with the requirement and to enable multi‑AZ spreading for future workloads (e.g., separate app/data subnets).
 - NAT per AZ: Each AZ has its own NAT for high availability; all private subnets in that AZ route to their local NAT.
 - Endpoints:
-o S3 is a gateway endpoint attached to the private route tables.
-o SSM/SSM Messages/EC2 Messages are interface endpoints with a dedicated SG that allows 443 from the VPC CIDR.
+   - S3 is a gateway endpoint attached to the private route tables.
+   - SSM/SSM Messages/EC2 Messages are interface endpoints with a dedicated SG that allows 443 from the VPC CIDR.
 - Pack/Fry idiom:
-o Pack: bake stable OS deps (nginx, ansible, systemd unit).
-o Fry: apply dynamic config at boot (site title/message) via user data → /etc/fry/vars.json → fry.service runs ansible-playbook.
+   - Pack: bake stable OS deps (nginx, ansible, systemd unit).
+   - Fry: apply dynamic config at boot (site title/message) via user data → /etc/fry/vars.json → fry.service runs ansible-playbook.
 - Private instances: The ASG runs in private subnets; outbound Internet goes via NAT to fetch packages/updates if needed.
 
 ## Clean up
@@ -124,7 +124,7 @@ terragrunt run --all destroy
 
 
 
-## 4) Helm Chart (Nginx + Ingress)
+## 5) Helm Chart (Nginx + Ingress)
 
 ### Overview
 This Helm chart deploys an NGINX deployment with a service and an ingress resource. The ingress can be configured to use either the AWS Load Balancer Controller (ALB) or a standard NGINX ingress controller.
