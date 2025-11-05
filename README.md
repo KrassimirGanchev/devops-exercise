@@ -117,7 +117,7 @@ o Fry: apply dynamic config at boot (site title/message) via user data → /etc/
 These resources incur cost (ALB, NAT Gateways!). When done, clean up:
 
 ```bash
-cd live/staging/
+cd live/
 terragrunt run --all destroy
 ```
 ---
